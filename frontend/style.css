@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #3b82f6;
+  --color-brand-hover: #2563eb;
+}
+
+body {
+  @apply bg-slate-900 text-slate-100 min-h-screen font-sans;
+}
+
+.glass-card {
+  @apply bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl;
+}
+
+.input-field {
+  @apply w-full p-3 rounded-lg border border-white/10 bg-slate-900/60 text-slate-100 outline-none transition-colors focus:border-brand;
+}
+
+.btn-primary {
+  @apply w-full p-3 rounded-lg bg-brand text-white font-semibold transition-all hover:bg-brand-hover active:scale-95;
+}
+
+.nav-link {
+  @apply text-slate-300 hover:text-brand transition-colors font-medium cursor-pointer;
+}
+
+/* Esconder seções */
+.view.hidden {
+  display: none !important;
+}

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Redes Wi-Fi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="flex flex-col">
+    <div id="app" class="flex-1 flex flex-col">
+        <!-- Barra de Navegação -->
+        <nav class="hidden bg-slate-800/80 backdrop-blur-md border-b border-white/10 px-8 py-4 flex justify-between items-center" id="navbar">
+            <div class="font-bold text-xl text-brand">Wi-Fi Analytics</div>
+            <div class="flex gap-6 items-center">
+                <button onclick="navigate('dashboard')" class="nav-link">Dashboard</button>
+                <button onclick="navigate('clientes')" class="nav-link">Clientes</button>
+                <button onclick="navigate('medicoes')" class="nav-link">Medições</button>
+                <button onclick="logout()" class="text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer">Sair</button>
+            </div>
+        </nav>
+
+        <!-- Container Principal -->
+        <main class="flex-1 flex justify-center items-center p-8">
+            
+            <!-- Tela de Login -->
+            <section id="login-section" class="view hidden w-full max-w-md">
+                <div class="glass-card">
+                    <h2 class="text-2xl font-bold mb-2">Bem-vindo de volta</h2>
+                    <p class="text-slate-400 text-sm mb-6">Faça login para acessar o sistema.</p>
+                    <form id="login-form" class="space-y-4">
+                        <div>
+                            <label for="login-email" class="block text-sm text-slate-400 mb-1">Email</label>
+                            <input type="email" id="login-email" class="input-field" required>
+                        </div>
+                        <div>
+                            <label for="login-senha" class="block text-sm text-slate-400 mb-1">Senha</label>
+                            <input type="password" id="login-senha" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn-primary mt-4">Entrar</button>
+                    </form>
+                    <p class="mt-6 text-center text-sm text-slate-400">
+                        Não tem conta? <a href="#" onclick="switchAuth('register')" class="text-brand font-semibold hover:underline">Cadastre-se</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Tela de Cadastro de Usuário -->
+            <section id="register-section" class="view hidden w-full max-w-md">
+                <div class="glass-card">
+                    <h2 class="text-2xl font-bold mb-2">Criar Conta</h2>
+                    <p class="text-slate-400 text-sm mb-6">Registre-se para iniciar a análise.</p>
+                    <form id="register-form" class="space-y-4">
+                        <div>
+                            <label for="reg-nome" class="block text-sm text-slate-400 mb-1">Nome Completo</label>
+                            <input type="text" id="reg-nome" class="input-field" required>
+                        </div>
+                        <div>
+                            <label for="reg-email" class="block text-sm text-slate-400 mb-1">Email</label>
+                            <input type="email" id="reg-email" class="input-field" required>
+                        </div>
+                        <div>
+                            <label for="reg-senha" class="block text-sm text-slate-400 mb-1">Senha</label>
+                            <input type="password" id="reg-senha" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn-primary mt-4">Registrar</button>
+                    </form>
+                    <p class="mt-6 text-center text-sm text-slate-400">
+                        Já tem conta? <a href="#" onclick="switchAuth('login')" class="text-brand font-semibold hover:underline">Faça Login</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Tela de Clientes (Lista) -->
+            <section id="clientes-section" class="view hidden w-full max-w-4xl">
+                <div class="glass-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Clientes (Empresas)</h2>
+                        <button onclick="abrirModalNovoCliente()" class="bg-white text-slate-900 font-bold py-2 px-6 rounded-xl hover:bg-slate-200 transition-colors shadow-md">
+                            + Novo
+                        </button>
+                    </div>
+                    <div id="lista-clientes-container" class="flex flex-col gap-4 mt-8">
+                        <!-- Cards de clientes gerados via JS -->
+                    </div>
+                </div>
+            </section>
+            <!-- Tela de Medições (Lista) -->
+            <section id="medicoes-section" class="view hidden w-full max-w-4xl">
+                <div class="glass-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Medições</h2>
+                        <button onclick="abrirModalNovaMedicao()" class="bg-white text-slate-900 font-bold py-2 px-6 rounded-xl hover:bg-slate-200 transition-colors shadow-md">
+                            + Nova
+                        </button>
+                    </div>
+                    
+                    <div id="lista-medicoes-container" class="flex flex-col gap-4 mt-8">
+                        <!-- Cards renderizados dinamicamente via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard -->
+            <section id="dashboard-section" class="view hidden w-full max-w-6xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-bold">Dashboard Analítico</h2>
+                    <select id="dash-imovel" class="input-field w-full sm:w-64 bg-slate-800" onchange="loadDashboardData()"></select>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass-card">
+                        <h3 class="text-xl font-bold mb-6">Gráfico de Desempenho</h3>
+                        <canvas id="barChart"></canvas>
+                    </div>
+                    <div class="glass-card">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold">Mapa de Calor (Sinal)</h3>
+                            <button onclick="loadDashboardData()" class="p-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-brand rounded-lg border border-white/5 transition-colors" title="Atualizar Dados">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            </button>
+                        </div>
+                        <div id="heatmap-wrapper" class="relative w-full bg-slate-900/50 rounded-xl overflow-hidden border border-white/5">
+                            <img id="heatmap-bg-img" class="w-full block pointer-events-none" />
+                            <div id="heatmap-area" class="absolute inset-0"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal Novo Cliente -->
+    <div id="novo-cliente-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="glass-card w-full max-w-xl">
+            <h2 class="text-2xl font-bold mb-6">Cadastrar Cliente / Imóvel</h2>
+            <form id="cadastro-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Nome da Empresa / Cliente</label>
+                    <input type="text" id="cad-empresa" class="input-field" required>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Planta Baixa (Upload)</label>
+                    <input type="file" id="cad-planta" accept="image/*" class="input-field" required>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button type="button" onclick="fecharModalNovoCliente()" class="w-full p-3 rounded-lg bg-slate-700 text-white font-semibold transition-all hover:bg-slate-600">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Cadastro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edição Cliente -->
+    <div id="edit-cliente-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="glass-card w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4">Editar Cliente</h2>
+            <form id="edit-cliente-form" class="space-y-4">
+                <input type="hidden" id="edit-cliente-id">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Nome da Empresa</label>
+                    <input type="text" id="edit-cliente-empresa" class="input-field" required>
+                </div>
+                <div class="pt-2">
+                    <label class="block text-sm text-slate-400 mb-1">Nova Planta Baixa (Opcional)</label>
+                    <input type="file" id="edit-cliente-planta" accept="image/*" class="input-field">
+                    <p class="text-xs text-red-400 mt-2 font-medium">Aviso: Trocar a imagem da planta baixa fará com que todas as localizações das medições atuais deste imóvel sejam resetadas.</p>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button type="button" onclick="fecharModalEditCliente()" class="w-full p-3 rounded-lg bg-slate-700 text-white font-semibold transition-all hover:bg-slate-600">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nova Medição -->
+    <div id="nova-medicao-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4 overflow-y-auto">
+        <div class="glass-card w-full max-w-2xl my-auto max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-6">Lançamento de Medições</h2>
+            <form id="medicao-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Imóvel</label>
+                    <select id="med-imovel" class="input-field" required></select>
+                </div>
+                
+                <!-- Mapa Interativo -->
+                <div class="w-full relative bg-slate-900/50 rounded-xl overflow-hidden border border-white/5 cursor-crosshair hidden" id="med-mapa-container">
+                    <img id="med-mapa-img" class="w-full block pointer-events-none" />
+                    <div id="med-pin" class="absolute w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 hidden z-10 pointer-events-none"></div>
+                </div>
+                <p id="med-mapa-instrucao" class="text-xs text-brand text-center hidden">Clique no mapa acima para definir as coordenadas X e Y.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Semana (Ex: 24/03)</label>
+                        <input type="text" id="med-semana" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Horário (Ex: Seg 13h)</label>
+                        <input type="text" id="med-horario" class="input-field" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Cômodo</label>
+                    <input type="text" id="med-comodo" class="input-field" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Coord. X</label>
+                        <input type="number" id="med-x" class="input-field bg-slate-800/80 cursor-not-allowed" readonly placeholder="Clique no mapa">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Coord. Y</label>
+                        <input type="number" id="med-y" class="input-field bg-slate-800/80 cursor-not-allowed" readonly placeholder="Clique no mapa">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Vel. 2.4GHz (Mbps)</label>
+                        <input type="number" step="0.1" id="med-24" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Vel. 5GHz (Mbps)</label>
+                        <input type="number" step="0.1" id="med-50" class="input-field" required>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button type="button" onclick="fecharModalNovaMedicao()" class="w-full p-3 rounded-lg bg-slate-700 text-white font-semibold transition-all hover:bg-slate-600">Cancelar</button>
+                    <button type="submit" class="btn-primary">Registrar Medição</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="glass-card w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4">Editar Medição</h2>
+            <form id="edit-medicao-form" class="space-y-4">
+                <input type="hidden" id="edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Semana</label>
+                        <input type="text" id="edit-semana" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Horário</label>
+                        <input type="text" id="edit-horario" class="input-field" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Cômodo</label>
+                    <input type="text" id="edit-comodo" class="input-field" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Vel. 2.4GHz</label>
+                        <input type="number" step="0.1" id="edit-24" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Vel. 5GHz</label>
+                        <input type="number" step="0.1" id="edit-50" class="input-field" required>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button type="button" onclick="fecharModalEdicao()" class="w-full p-3 rounded-lg bg-slate-700 text-white font-semibold transition-all hover:bg-slate-600">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[60] flex flex-col gap-2"></div>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[70] hidden flex justify-center items-center p-4 transition-opacity">
+        <div class="glass-card w-full max-w-sm text-center">
+            <h2 class="text-xl font-bold mb-2">Atenção</h2>
+            <p id="confirm-message" class="text-slate-300 mb-6 text-sm"></p>
+            <div class="flex gap-4">
+                <button id="confirm-cancel-btn" class="w-full p-3 rounded-lg bg-slate-700 text-white font-semibold transition-all hover:bg-slate-600">Cancelar</button>
+                <button id="confirm-ok-btn" class="w-full p-3 rounded-lg bg-red-600 text-white font-semibold transition-all hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
