@@ -354,15 +354,13 @@ function renderHeatmap(medicoes, plantaUrl) {
                 return;
             }
 
-            // Destruir container anterior se existir
-            const oldContainer = document.getElementById('dynamic-heatmap-container');
-            if (oldContainer) oldContainer.remove();
+            const area = document.getElementById('heatmap-area');
+            // Remove canvas antigo, se houver
+            area.innerHTML = '';
             
-            // Criar um novo container intocável e absoluto
-            const dynamicArea = document.createElement('div');
-            dynamicArea.id = 'dynamic-heatmap-container';
-            dynamicArea.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;';
-            wrapper.appendChild(dynamicArea);
+            // É fundamental forçar as dimensões na div para o heatmap.js ler corretamente
+            area.style.width = w + 'px';
+            area.style.height = h + 'px';
             
             const points = medicoes
                 .filter(m => m.coordenada_x != null && !isNaN(parseFloat(m.coordenada_x)))
@@ -378,47 +376,34 @@ function renderHeatmap(medicoes, plantaUrl) {
                     return {
                         x: Math.round(px),
                         y: Math.round(py),
-                        value: parseFloat(m.velocidade_5ghz) || 0,
-                        comodo: m.comodo
+                        value: parseFloat(m.velocidade_5ghz) || 0
                     };
                 });
             
             if (points.length === 0) return;
 
-            // Injetar bolinha teste no novo container dinâmico
-            points.forEach(p => {
-                const dot = document.createElement('div');
-                dot.style.cssText = `
-                    position: absolute; 
-                    left: ${p.x}px; 
-                    top: ${p.y}px; 
-                    width: 24px; 
-                    height: 24px; 
-                    background-color: #00ff00; 
-                    border: 3px solid white; 
-                    border-radius: 50%; 
-                    transform: translate(-50%, -50%); 
-                    z-index: 10000;
-                    box-shadow: 0 0 10px #00ff00;
-                `;
-                dynamicArea.appendChild(dot);
-            });
-
             try {
                 heatmapInstance = h337.create({
-                    container: dynamicArea,
-                    radius: w > 1000 ? 100 : 70, 
+                    container: area,
+                    radius: w > 800 ? 250 : 180, // Raio expandido para simular propagação Wi-Fi
                     maxOpacity: 0.8,
-                    minOpacity: 0,
-                    blur: 0.85,
-                    gradient: { '0.15': 'blue', '0.45': 'cyan', '0.75': 'yellow', '1.0': 'red' }
+                    minOpacity: 0.05, // Opacidade mínima menor para um "fade out" mais natural nas bordas
+                    blur: 0.95 // Maior desfoque para suavizar bastante as bordas
                 });
                 
-                const maxVal = Math.max(...points.map(p => p.value), 50);
+                // O heatmap.js injeta style="position: relative" forçadamente no container
+                // Isso quebra o nosso layout e empurra ele pra baixo. 
+                // Vamos restaurar para absolute logo após a criação:
+                area.style.position = 'absolute';
+                area.style.top = '0';
+                area.style.left = '0';
+                
+                // Pegar o maior valor real para normalizar as cores corretamente
+                const maxVal = Math.max(...points.map(p => p.value));
                 
                 heatmapInstance.setData({
                     min: 0, 
-                    max: maxVal,
+                    max: maxVal > 0 ? maxVal : 100,
                     data: points
                 });
             } catch (err) {
@@ -431,13 +416,18 @@ function renderHeatmap(medicoes, plantaUrl) {
         const targetUrl = `http://localhost:3000${plantaUrl}`;
         if (img.src === targetUrl) {
             if (img.complete) render();
-            else img.onload = render;
+            else {
+                img.onload = render;
+                img.onerror = render;
+            }
         } else {
             img.onload = render;
+            img.onerror = render;
             img.src = targetUrl;
         }
     } else {
         img.src = '';
+        render(); // Still attempt to render if there's no planta
         const old = document.getElementById('dynamic-heatmap-container');
         if (old) old.remove();
         heatmapInstance = null;

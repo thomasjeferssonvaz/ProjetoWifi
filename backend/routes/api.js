@@ -99,8 +99,18 @@ router.post('/upload', authMiddleware, upload.single('planta'), (req, res) => {
  *       201:
  *         description: Cliente e imóvel cadastrados com sucesso
  */
-router.post('/clientes', authMiddleware, (req, res) => {
-  const { empresa, responsavel, endereco, planta_url, local_ap } = req.body;
+router.post('/clientes', authMiddleware, upload.single('planta'), (req, res) => {
+  const { empresa, responsavel, endereco } = req.body;
+  // Se local_ap for enviado como string no form-data, precisamos fazer o parse
+  let local_ap;
+  try {
+    local_ap = req.body.local_ap ? JSON.parse(req.body.local_ap) : {};
+  } catch (e) {
+    local_ap = {};
+  }
+
+  // A planta_url agora vem do arquivo feito upload (se existir), ou do req.body.planta_url
+  const planta_url = req.file ? `/uploads/${req.file.filename}` : req.body.planta_url;
   
   db.run(
     'INSERT INTO clientes (empresa, responsavel, endereco, usuario_id) VALUES (?, ?, ?, ?)',
